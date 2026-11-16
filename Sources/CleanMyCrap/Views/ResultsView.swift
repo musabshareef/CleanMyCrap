@@ -50,8 +50,10 @@ struct ResultsView: View {
             .safeAreaInset(edge: .bottom) {
                 FlushBar { confirming = true }
             }
-            .background(AmbientBackground().opacity(0.6))
+            .scrollEdgeEffectStyle(.soft, for: .all)
         }
+        .background(AmbientBackground().opacity(0.6))
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .navigationTitle("Clean My Crap")
         .navigationSubtitle("\(model.totalFound.bytes) of crap found")
         .toolbar {
@@ -151,6 +153,7 @@ struct OverviewView: View {
             .padding(32)
             .padding(.bottom, 20)
             .frame(maxWidth: 1100, alignment: .leading)
+            .frame(maxWidth: .infinity)
         }
     }
 }
@@ -369,6 +372,7 @@ struct CategoryDetailView: View {
             .padding(32)
             .padding(.bottom, 20)
             .frame(maxWidth: 1100, alignment: .leading)
+            .frame(maxWidth: .infinity)
         }
     }
 }
@@ -471,6 +475,7 @@ struct FlushBar: View {
         .padding(.trailing, 10)
         .padding(.vertical, 10)
         .glassEffect(in: .capsule)
+        .frame(maxWidth: 1036)
         .padding(.horizontal, 24)
         .padding(.bottom, 16)
         .animation(.snappy, value: size)

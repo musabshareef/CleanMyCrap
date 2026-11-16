@@ -25,6 +25,8 @@ struct AmbientBackground: View {
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .ignoresSafeArea()
+        // Purely decorative: let clicks through to the title bar (double-click to zoom, dragging).
+        .allowsHitTesting(false)
     }
 }
 
