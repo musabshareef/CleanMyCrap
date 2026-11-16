@@ -1,0 +1,9 @@
+{
+  "model": "gpt-image-2.6-sunburst",
+  "output_format": "svg",
+  "n": 1,
+  "size": "1024x1024",
+  "quality": "high",
+  "svg": { "model": "gpt-6-astra" },
+  "prompt": "App icon foreground artwork for a cheeky Mac disk-cleaner app called \"Clean My Crap\". Subject: a cute, glossy, three-tier swirl-shaped poo, like a soft-serve swirl with a curled pointy tip on top, sitting on a flat base, drawn so polished and clean that it looks like a sculpture; four-pointed sparkle stars around it (one large at upper right, one medium at upper left, one small at right). No face. Style: Apple macOS 26 Liquid Glass app icon layer art: flat, solid vector shapes only, no outlines, no text, no gradients, no shadows, no textures, no background, no rounded-square plate. Each tier is its own simple rounded shape with a thin visible gap between tiers so it reads clearly at 16px. Poo in warm chocolate brown (#8A5232), sparkles in pure white (#FFFFFF). Leave the canvas transparent. Center the poo with generous padding so all artwork fits inside the middle 68% of a 1024x1024 viewBox and the poo is visually centered. Put the poo shapes in a <g id=\"poo\"> and the sparkles in a <g id=\"sparkles\">. Use few, smooth paths."
+}
