@@ -27,8 +27,12 @@ struct ResultsView: View {
                                 }
                             }
                         } header: {
-                            Label(risk.title, systemImage: risk.symbol)
-                                .foregroundStyle(risk.color)
+                            HStack(spacing: 6) {
+                                Image(systemName: risk.symbol)
+                                    .foregroundStyle(risk.color)
+                                Text(risk.title)
+                                    .foregroundStyle(risk.color)
+                            }
                         }
                     }
                 }
@@ -47,13 +51,10 @@ struct ResultsView: View {
                     OverviewView(selection: $selection)
                 }
             }
-            .safeAreaInset(edge: .bottom) {
+            .safeAreaBar(edge: .bottom) {
                 FlushBar { confirming = true }
             }
-            .scrollEdgeEffectStyle(.soft, for: .all)
         }
-        .background(AmbientBackground().opacity(0.6))
-        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .navigationTitle("Clean My Crap")
         .navigationSubtitle("\(model.totalFound.bytes) of crap found")
         .toolbar {
@@ -107,6 +108,7 @@ struct CategoryRow: View {
                 .toggleStyle(.checkbox)
                 .labelsHidden()
                 .fixedSize()
+                .tint(category.risk.color)
             Image(systemName: category.icon)
                 .foregroundStyle(category.risk.color)
                 .frame(width: 20)
@@ -197,13 +199,14 @@ struct RiskCard: View {
                 Spacer()
                 Button(allOn ? "Deselect" : "Select All") { model.select(risk, !allOn) }
                     .buttonStyle(.glass)
+                    .tint(risk.color)
                     .controlSize(.small)
                     .disabled(total == 0)
             }
         }
         .padding(20)
         .frame(maxWidth: .infinity, minHeight: 250, alignment: .topLeading)
-        .glassEffect(.regular.tint(risk.color.opacity(0.10)), in: .rect(cornerRadius: 26))
+        .glassEffect(.regular.tint(risk.color.opacity(0.05)), in: .rect(cornerRadius: 26))
     }
 }
 
@@ -283,7 +286,7 @@ struct FullDiskAccessBanner: View {
         HStack(spacing: 14) {
             Image(systemName: "lock.shield.fill")
                 .font(.title)
-                .foregroundStyle(.blue)
+                .foregroundStyle(Brand.accent)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Some crap is behind a locked door")
                     .font(.headline)
@@ -300,7 +303,7 @@ struct FullDiskAccessBanner: View {
             .buttonStyle(.glass)
         }
         .padding(18)
-        .glassEffect(.regular.tint(.blue.opacity(0.08)), in: .rect(cornerRadius: 20))
+        .glassEffect(in: .rect(cornerRadius: 20))
     }
 }
 
@@ -344,7 +347,7 @@ struct CategoryDetailView: View {
                         .font(.callout)
                         .padding(14)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .glassEffect(.regular.tint(.blue.opacity(0.06)), in: .rect(cornerRadius: 14))
+                        .glassEffect(in: .rect(cornerRadius: 14))
                 }
 
                 HStack {
@@ -389,6 +392,7 @@ struct ItemRow: View {
                 .toggleStyle(.checkbox)
                 .labelsHidden()
                 .fixedSize()
+                .tint(color)
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.name).lineLimit(1)
                 if let detail = item.detail {
@@ -467,7 +471,7 @@ struct FlushBar: View {
                     .padding(.vertical, 2)
             }
             .buttonStyle(.glassProminent)
-            .tint(model.selected(for: .high) > 0 ? .red : .teal)
+            .tint(model.selected(for: .high) > 0 ? .red : Brand.accent)
             .controlSize(.large)
             .disabled(size == 0)
         }

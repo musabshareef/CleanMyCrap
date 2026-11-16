@@ -54,7 +54,7 @@ struct ScanningView: View {
                     Circle().stroke(.quaternary, lineWidth: 14)
                     Circle()
                         .trim(from: 0, to: max(model.scanProgress, 0.02))
-                        .stroke(AngularGradient(colors: [.teal, .cyan, .mint, .teal], center: .center),
+                        .stroke(AngularGradient(colors: [Brand.peach, Brand.pink, Brand.peach], center: .center),
                                 style: StrokeStyle(lineWidth: 14, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                         .animation(.smooth, value: model.scanProgress)
@@ -116,9 +116,9 @@ struct CleaningView: View {
 
     var body: some View {
         ZStack {
-            AmbientBackground(tint: .cyan)
+            AmbientBackground()
             VStack(spacing: 26) {
-                Mascot(size: 168, wiggle: true)
+                Mascot(size: 168, mood: .flushing)
                 Quips(lines: Copy.flushing, interval: 1.8)
                 VStack(spacing: 10) {
                     ProgressView(value: model.cleanProgress)
@@ -149,10 +149,10 @@ struct DoneView: View {
     var body: some View {
         let report = model.report
         ZStack {
-            AmbientBackground(tint: .green)
+            AmbientBackground()
             ScrollView {
                 VStack(spacing: 24) {
-                    Mascot(size: 150, symbol: "checkmark")
+                    Mascot(size: 150, mood: .proud)
                     VStack(spacing: 8) {
                         Text("Flushed \(shown.bytes)")
                             .font(.system(size: 50, weight: .bold, design: .rounded))
@@ -174,7 +174,7 @@ struct DoneView: View {
 
                         VStack(alignment: .leading, spacing: 10) {
                             if report.touchedDocker {
-                                callout("shippingbox.fill", .blue,
+                                callout("shippingbox.fill", .secondary,
                                         "Restart Docker Desktop to actually get Docker's space back. It keeps everything in one big file and only lets go on a restart.")
                             }
                             if report.movedToTrash {
@@ -230,7 +230,7 @@ struct DoneView: View {
 
     private func stat(_ title: String, _ value: String, _ icon: String) -> some View {
         VStack(spacing: 6) {
-            Image(systemName: icon).font(.title2).foregroundStyle(.teal)
+            Image(systemName: icon).font(.title2).foregroundStyle(Brand.accent)
             Text(value).font(.title3.weight(.semibold)).monospacedDigit()
             Text(title).font(.caption).foregroundStyle(.secondary)
         }
@@ -245,6 +245,6 @@ struct DoneView: View {
             Spacer(minLength: 0)
         }
         .padding(14)
-        .glassEffect(.regular.tint(color.opacity(0.08)), in: .rect(cornerRadius: 16))
+        .glassEffect(in: .rect(cornerRadius: 16))
     }
 }

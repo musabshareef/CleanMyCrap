@@ -1,56 +1,66 @@
 import SwiftUI
 
-/// Soft, slowly drifting mesh gradient behind the hero screens.
-struct AmbientBackground: View {
-    var tint: Color = .teal
+/// Colors lifted from the app icon's sunset.
+enum Brand {
+    static let peach = Color(red: 1.00, green: 0.70, blue: 0.42)
+    static let pink = Color(red: 0.94, green: 0.31, blue: 0.48)
+    /// Buttons, selection, progress.
+    static let accent = Color(red: 0.93, green: 0.38, blue: 0.43)
+    static let gradient = LinearGradient(colors: [peach, pink], startPoint: .topLeading, endPoint: .bottomTrailing)
+}
 
+/// A clean, neutral backdrop with the faintest warm glow up top.
+struct AmbientBackground: View {
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30)) { ctx in
-            let t = ctx.date.timeIntervalSinceReferenceDate
-            let x = Float(sin(t * 0.21)) * 0.18
-            let y = Float(cos(t * 0.17)) * 0.18
-            MeshGradient(
-                width: 3, height: 3,
-                points: [
-                    [0, 0], [0.5, 0], [1, 0],
-                    [0, 0.5], [0.5 + x, 0.5 + y], [1, 0.5],
-                    [0, 1], [0.5, 1], [1, 1],
-                ],
-                colors: [
-                    tint.opacity(0.30), .mint.opacity(0.18), .indigo.opacity(0.22),
-                    .cyan.opacity(0.14), .clear, tint.opacity(0.18),
-                    .indigo.opacity(0.18), .mint.opacity(0.22), .cyan.opacity(0.26),
-                ]
-            )
+        ZStack {
+            Color(nsColor: .windowBackgroundColor)
+            RadialGradient(colors: [Brand.peach.opacity(0.10), .clear],
+                           center: .top, startRadius: 0, endRadius: 700)
         }
-        .background(Color(nsColor: .windowBackgroundColor))
         .ignoresSafeArea()
         // Purely decorative: let clicks through to the title bar (double-click to zoom, dragging).
         .allowsHitTesting(false)
     }
 }
 
-/// The app's mascot: a very clean toilet in a glass bubble.
+/// The app icon itself, doing a little performance.
 struct Mascot: View {
-    var size: CGFloat = 150
-    var symbol = "toilet.fill"
-    var wiggle = false
+    enum Mood { case idle, flushing, proud }
+
+    var size: CGFloat = 168
+    var mood: Mood = .idle
 
     var body: some View {
-        ZStack {
-            Image(systemName: symbol)
-                .font(.system(size: size * 0.42, weight: .medium))
-                .foregroundStyle(LinearGradient(colors: [.teal, .cyan], startPoint: .top, endPoint: .bottom))
-                .symbolEffect(.wiggle, options: .repeat(.periodic(delay: 1.2)), isActive: wiggle)
-                .symbolEffect(.breathe, options: .repeat(.continuous), isActive: !wiggle)
-            Image(systemName: "sparkles")
-                .font(.system(size: size * 0.2, weight: .semibold))
-                .foregroundStyle(.yellow.gradient)
-                .symbolEffect(.variableColor.iterative.dimInactiveLayers, options: .repeat(.continuous))
-                .offset(x: size * 0.27, y: -size * 0.25)
+        Image(nsImage: NSApp.applicationIconImage)
+            .resizable()
+            .interpolation(.high)
+            .frame(width: size, height: size)
+            .overlay(alignment: .bottomTrailing) {
+                if mood == .proud {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: size * 0.26, weight: .bold))
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, .green)
+                        .background(Circle().fill(.white).padding(4))
+                        .offset(x: -size * 0.04, y: -size * 0.04)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .phaseAnimator(phases) { view, phase in
+                view
+                    .rotationEffect(.degrees(mood == .flushing ? phase * 7 : 0), anchor: .bottom)
+                    .offset(y: mood == .idle ? phase * -6 : 0)
+            } animation: { _ in
+                mood == .flushing ? .easeInOut(duration: 0.18) : .easeInOut(duration: 1.6)
+            }
+    }
+
+    private var phases: [Double] {
+        switch mood {
+        case .idle: [0, 1]
+        case .flushing: [0, -1, 1, -1, 1, 0, 0, 0]
+        case .proud: [0]
         }
-        .frame(width: size, height: size)
-        .glassEffect(.regular.tint(.teal.opacity(0.12)), in: .circle)
     }
 }
 
@@ -98,7 +108,7 @@ struct DiskGauge: View {
     }
 
     private var barColors: [Color] {
-        disk.usedFraction > 0.9 ? [.orange, .red] : disk.usedFraction > 0.75 ? [.teal, .orange] : [.teal, .cyan]
+        disk.usedFraction > 0.9 ? [.orange, .red] : [Brand.peach, Brand.pink]
     }
 }
 

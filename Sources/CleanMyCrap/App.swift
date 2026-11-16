@@ -10,7 +10,7 @@ struct CleanMyCrapApp: App {
             RootView()
                 .environment(model)
                 .frame(minWidth: 940, minHeight: 640)
-                .tint(.teal)
+                .tint(Brand.accent)
         }
         .defaultSize(width: 1160, height: 760)
         .windowToolbarStyle(.unified)
