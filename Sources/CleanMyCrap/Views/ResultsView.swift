@@ -51,12 +51,9 @@ struct ResultsView: View {
                     OverviewView(selection: $selection)
                 }
             }
-            .safeAreaBar(edge: .bottom) {
-                FlushBar { confirming = true }
-            }
         }
         .navigationTitle("Clean My Crap")
-        .navigationSubtitle("\(model.totalFound.bytes) of crap found")
+        .navigationSubtitle(subtitle)
         .toolbar {
             ToolbarItemGroup {
                 Menu {
@@ -73,6 +70,22 @@ struct ResultsView: View {
                 }
                 .help("Scan again")
             }
+            ToolbarSpacer(.fixed)
+            ToolbarItem(placement: .primaryAction) {
+                let size = model.selectedSize
+                Button { confirming = true } label: {
+                    Label("Flush \(size > 0 ? size.bytes : "")", systemImage: "drop.fill")
+                        .labelStyle(.titleAndIcon)
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                }
+                .buttonStyle(.glassProminent)
+                .tint(model.selected(for: .high) > 0 ? .red : Brand.accent)
+                .keyboardShortcut(.delete, modifiers: .command)
+                .disabled(size == 0)
+                .help(size > 0 ? "Flush the selected crap (⌘⌫)" : "Select some crap first")
+                .animation(.snappy, value: size)
+            }
         }
         .alert("Flush \(model.selectedSize.bytes) of crap?", isPresented: $confirming) {
             Button("Flush It", role: .destructive) { Task { await model.flush() } }
@@ -80,6 +93,13 @@ struct ResultsView: View {
         } message: {
             Text(confirmMessage)
         }
+    }
+
+    private var subtitle: String {
+        let selected = model.selectedSize
+        return selected > 0
+            ? "\(selected.bytes) of \(model.totalFound.bytes) selected"
+            : "\(model.totalFound.bytes) of crap found. Nothing selected."
     }
 
     private var confirmMessage: String {
@@ -131,7 +151,7 @@ struct OverviewView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(Copy.headline(for: model.totalFound))
                         .font(.system(size: 34, weight: .bold, design: .rounded))
@@ -150,10 +170,8 @@ struct OverviewView: View {
 
                 BiggestOffenders(selection: $selection)
             }
-            .padding(32)
-            .padding(.bottom, 20)
-            .frame(maxWidth: 1100, alignment: .leading)
-            .frame(maxWidth: .infinity)
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
@@ -236,9 +254,9 @@ struct BiggestOffenders: View {
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
-                                Spacer()
+                                .frame(minWidth: 180, idealWidth: 300, maxWidth: 360, alignment: .leading)
                                 SizeBar(fraction: Double(entry.item.size) / Double(biggest), color: entry.category.risk.color)
-                                    .frame(width: 140)
+                                    .frame(minWidth: 80, maxWidth: .infinity)
                                 Text(entry.item.size.bytes)
                                     .monospacedDigit()
                                     .frame(width: 80, alignment: .trailing)
@@ -286,7 +304,7 @@ struct FullDiskAccessBanner: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Some crap is behind a locked door")
                     .font(.headline)
-                Text("Give Clean My Crap Full Disk Access to sniff your Trash and device backups too, then scan again.")
+                Text("Give Clean My Crap Full Disk Access to sniff your Trash, Mail and Messages attachments, podcasts and device backups too, then scan again.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -306,176 +324,132 @@ struct FullDiskAccessBanner: View {
 
 struct CategoryDetailView: View {
     @Bindable var category: CleanupCategory
+    @State private var highlighted = Set<CleanupItem.ID>()
+    @State private var sortOrder = [KeyPathComparator(\CleanupItem.size, order: .reverse)]
 
     var body: some View {
-        let biggest = category.items.first?.size ?? 1
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                HStack(alignment: .top, spacing: 18) {
-                    Image(systemName: category.icon)
-                        .font(.system(size: 30))
-                        .foregroundStyle(category.risk.color)
-                        .frame(width: 68, height: 68)
-                        .background(category.risk.color.opacity(0.12), in: .rect(cornerRadius: 16, style: .continuous))
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 10) {
-                            Text(category.name).font(.largeTitle.weight(.bold))
-                            RiskBadge(risk: category.risk)
-                        }
-                        Text(category.explanation)
-                            .font(.title3)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(category.totalSize.bytes)
-                            .font(.system(size: 30, weight: .bold, design: .rounded))
-                            .monospacedDigit()
-                        Text("\(category.items.count) \(category.items.count == 1 ? "item" : "items")")
-                            .foregroundStyle(.secondary)
-                    }
+        let rows = category.items.sorted(using: sortOrder)
+        let biggest = category.items.map(\.size).max() ?? 1
+
+        VStack(spacing: 0) {
+            header
+                .padding(.horizontal, 24)
+                .padding(.top, 20)
+                .padding(.bottom, 16)
+
+            Table(rows, selection: $highlighted, sortOrder: $sortOrder) {
+                TableColumn("") { item in
+                    Toggle("", isOn: category.binding(for: item.id))
+                        .toggleStyle(.checkbox)
+                        .labelsHidden()
+                        .tint(category.risk.color)
                 }
+                .width(22)
 
-                if let note = category.note {
-                    Label(note, systemImage: "info.circle.fill")
-                        .font(.callout)
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .card(cornerRadius: 12)
+                TableColumn("Name", value: \.name) { item in
+                    Text(item.name)
+                        .lineLimit(1)
+                        .help(item.name)
                 }
+                .width(min: 160, ideal: 280)
 
-                HStack {
-                    Text("\(category.selectedSize.bytes) selected")
-                        .font(.headline)
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-                    Spacer()
-                    Button("Select All") { withAnimation(.snappy) { category.setAll(true) } }
-                        .disabled(category.allSelected)
-                    Button("Select None") { withAnimation(.snappy) { category.setAll(false) } }
-                        .disabled(category.selectedCount == 0)
-                }
-
-                LazyVStack(spacing: 0) {
-                    ForEach($category.items) { $item in
-                        ItemRow(item: $item, fraction: Double(item.size) / Double(biggest), color: category.risk.color)
-                        if item.id != category.items.last?.id { Divider().padding(.leading, 44) }
-                    }
-                }
-                .padding(.vertical, 4)
-                .card()
-            }
-            .padding(32)
-            .padding(.bottom, 20)
-            .frame(maxWidth: 1100, alignment: .leading)
-            .frame(maxWidth: .infinity)
-        }
-    }
-}
-
-struct ItemRow: View {
-    @Binding var item: CleanupItem
-    var fraction: Double
-    var color: Color
-    @State private var hovering = false
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Toggle(isOn: $item.isSelected) { EmptyView() }
-                .toggleStyle(.checkbox)
-                .labelsHidden()
-                .fixedSize()
-                .tint(color)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.name).lineLimit(1)
-                if let detail = item.detail {
-                    Text(detail)
-                        .font(.caption)
+                TableColumn("Where") { item in
+                    Text(item.detail ?? item.removal.url?.deletingLastPathComponent().path(percentEncoded: false) ?? "")
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-            }
-            Spacer(minLength: 12)
-            if let url = item.removal.url {
-                Button {
-                    revealInFinder(url)
-                } label: {
-                    Image(systemName: "magnifyingglass")
+                .width(min: 120, ideal: 320)
+
+                TableColumn("Size", value: \.size) { item in
+                    HStack(spacing: 10) {
+                        SizeBar(fraction: Double(item.size) / Double(biggest), color: category.risk.color)
+                        Text(item.size.bytes)
+                            .monospacedDigit()
+                            .frame(minWidth: 64, alignment: .trailing)
+                    }
                 }
-                .buttonStyle(.borderless)
-                .help("Show in Finder")
-                .opacity(hovering ? 1 : 0)
+                .width(min: 150, ideal: 220)
             }
-            SizeBar(fraction: fraction, color: color)
-                .frame(width: 110)
-            Text(item.size.bytes)
-                .monospacedDigit()
-                .frame(width: 80, alignment: .trailing)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .contentShape(.rect)
-        .onTapGesture { withAnimation(.snappy) { item.isSelected.toggle() } }
-        .onHover { hovering = $0 }
-        .contextMenu {
-            if let url = item.removal.url {
-                Button("Show in Finder") { revealInFinder(url) }
-                Button("Copy Path") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(url.path, forType: .string)
+            .tableStyle(.inset)
+            .alternatingRowBackgrounds(.enabled)
+            .contextMenu(forSelectionType: CleanupItem.ID.self) { ids in
+                let targets = ids.isEmpty ? highlighted : ids
+                Button("Select for Flushing") { category.set(targets, true) }
+                Button("Don't Flush") { category.set(targets, false) }
+                let urls = urls(for: targets)
+                if !urls.isEmpty {
+                    Divider()
+                    Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting(urls) }
+                    Button("Copy Path") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(urls.map { $0.path(percentEncoded: false) }.joined(separator: "\n"), forType: .string)
+                    }
                 }
+            } primaryAction: { ids in
+                let urls = urls(for: ids)
+                if !urls.isEmpty { NSWorkspace.shared.activateFileViewerSelecting(urls) }
+            }
+            .onKeyPress(.space) {
+                guard !highlighted.isEmpty else { return .ignored }
+                let allOn = category.items.filter { highlighted.contains($0.id) }.allSatisfy(\.isSelected)
+                category.set(highlighted, !allOn)
+                return .handled
             }
         }
+        .onChange(of: category.id) { highlighted = [] }
     }
-}
 
-// MARK: - Flush bar
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 14) {
+                Image(systemName: category.icon)
+                    .font(.system(size: 22))
+                    .foregroundStyle(category.risk.color)
+                    .frame(width: 44, height: 44)
+                    .background(category.risk.color.opacity(0.12), in: .rect(cornerRadius: 11, style: .continuous))
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 8) {
+                        Text(category.name).font(.title2.weight(.bold))
+                        RiskBadge(risk: category.risk)
+                    }
+                    Text(category.explanation)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 20)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(category.totalSize.bytes)
+                        .font(.title2.weight(.bold))
+                        .monospacedDigit()
+                    Text("\(category.items.count) \(category.items.count == 1 ? "item" : "items")")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
 
-struct FlushBar: View {
-    @Environment(AppModel.self) private var model
-    var action: () -> Void
+            if let note = category.note {
+                Label(note, systemImage: "info.circle.fill")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
 
-    var body: some View {
-        let size = model.selectedSize
-        HStack(spacing: 18) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(size > 0 ? "\(size.bytes) of crap selected" : "Nothing selected. Your crap is safe. For now.")
+            HStack {
+                Text("\(category.selectedSize.bytes) selected")
                     .font(.headline)
                     .monospacedDigit()
                     .contentTransition(.numericText())
-                HStack(spacing: 14) {
-                    ForEach(Risk.allCases) { r in
-                        HStack(spacing: 5) {
-                            Circle().fill(r.color).frame(width: 7, height: 7)
-                            Text("\(r.shortLabel) \(model.selected(for: r).bytes)")
-                                .monospacedDigit()
-                        }
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Spacer()
+                Button("Select All") { withAnimation(.snappy) { category.setAll(true) } }
+                    .disabled(category.allSelected)
+                Button("Select None") { withAnimation(.snappy) { category.setAll(false) } }
+                    .disabled(category.selectedCount == 0)
             }
-            Spacer()
-            Button(action: action) {
-                Label("Flush \(size > 0 ? size.bytes : "")", systemImage: "drop.fill")
-                    .font(.headline)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 2)
-            }
-            .buttonStyle(.glassProminent)
-            .tint(model.selected(for: .high) > 0 ? .red : Brand.accent)
-            .controlSize(.large)
-            .disabled(size == 0)
         }
-        .padding(.leading, 22)
-        .padding(.trailing, 10)
-        .padding(.vertical, 10)
-        .glassEffect(in: .capsule)
-        .frame(maxWidth: 1036)
-        .padding(.horizontal, 24)
-        .padding(.bottom, 16)
-        .animation(.snappy, value: size)
+    }
+
+    private func urls(for ids: Set<CleanupItem.ID>) -> [URL] {
+        category.items.filter { ids.contains($0.id) }.compactMap(\.removal.url)
     }
 }

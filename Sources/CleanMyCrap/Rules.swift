@@ -25,6 +25,11 @@ enum Rules {
             }
             return await FS.sizedPaths(paths) { .delete($0) }
         },
+        Rule(id: "web-caches", name: "Browser & Chat App Caches", icon: "globe", risk: .safe,
+             explanation: "Chrome, Edge, Brave, Slack, Discord and other web-based apps keep extra caches outside the usual spot. They rebuild them without asking.",
+             note: "Quit those apps first, or they'll start refilling it while you watch.") {
+            await WebCaches.scan()
+        },
         Rule(id: "derived-data", name: "Xcode DerivedData", icon: "hammer.fill", risk: .safe,
              explanation: "Xcode's build leftovers. Rebuilt the next time you hit ⌘B.") {
             await FS.sizedChildren(of: FS.url("Library/Developer/Xcode/DerivedData")) { .delete($0) }
@@ -97,12 +102,47 @@ enum Rules {
             let files = FS.children(of: FS.url("Downloads")).filter { exts.contains($0.pathExtension.lowercased()) }
             return await FS.sized(files.map { ($0, $0.lastPathComponent, nil) }) { .delete($0) }
         },
+        Rule(id: "mail-downloads", name: "Mail Attachments", icon: "envelope.fill", risk: .low,
+             explanation: "Copies of attachments you opened in Mail. The originals stay in your email, so Mail fetches them again if you open them.") {
+            guard FS.hasFullDiskAccess else { return [] }
+            return await FS.sizedChildren(of: FS.url("Library/Containers/com.apple.mail/Data/Library/Mail Downloads")) { .delete($0) }
+        },
+        Rule(id: "ios-updates", name: "iPhone & iPad Updates", icon: "arrow.down.circle.fill", risk: .low,
+             explanation: "Software updates Finder downloaded to update your devices. Your iPhone already has it. Finder downloads it again if it ever needs to.") {
+            async let phone = FS.sizedChildren(of: FS.url("Library/iTunes/iPhone Software Updates")) { .delete($0) }
+            async let pad = FS.sizedChildren(of: FS.url("Library/iTunes/iPad Software Updates")) { .delete($0) }
+            return await phone + pad
+        },
+        Rule(id: "podcasts", name: "Downloaded Podcasts", icon: "antenna.radiowaves.left.and.right", risk: .low,
+             explanation: "Episodes the Podcasts app downloaded, including the ones you finished months ago. They stream or download again on demand.") {
+            guard FS.hasFullDiskAccess else { return [] }
+            return await FS.sizedPaths([
+                ("Library/Group Containers/243LU875E5.groups.com.apple.podcasts/Library/Cache", "Podcasts downloads"),
+            ]) { .delete($0) }
+        },
         Rule(id: "trash", name: "Trash", icon: "trash.fill", risk: .low,
              explanation: "Stuff you already threw away but never took out. Emptying it is forever.") {
             await FS.sizedChildren(of: FS.url(".Trash"), includeHidden: true, minSize: 1, exclude: [".DS_Store"]) { .delete($0) }
         },
 
         // MARK: High risk — look before you flush
+        Rule(id: "old-downloads", name: "Forgotten Downloads", icon: "tray.and.arrow.down.fill", risk: .high,
+             explanation: "Stuff that's been sitting in Downloads for over two months. You probably don't need it. You might.") {
+            await Downloads.forgotten()
+        },
+        Rule(id: "screenshots", name: "Screenshots & Recordings", icon: "camera.viewfinder", risk: .high,
+             explanation: "Screenshots and screen recordings piling up on your Desktop. Some are evidence. Most are clutter.") {
+            await Screenshots.scan()
+        },
+        Rule(id: "messages", name: "Messages Attachments", icon: "message.fill", risk: .high,
+             explanation: "Photos, videos and files from your Messages chats. With Messages in iCloud they download again when you scroll back. Without it, this might be the only copy.") {
+            guard FS.hasFullDiskAccess else { return [] }
+            return await FS.sizedPaths([("Library/Messages/Attachments", "All Messages attachments")]) { .trash($0) }
+        },
+        Rule(id: "meetings", name: "Meeting Recordings", icon: "video.fill", risk: .high,
+             explanation: "Local Zoom recordings. That meeting could have been an email, but the recording might still matter to someone.") {
+            await FS.sizedChildren(of: FS.url("Documents/Zoom")) { .trash($0) }
+        },
         Rule(id: "docker-volumes", name: "Docker Volumes", icon: "externaldrive.fill", risk: .high,
              explanation: "Volumes no container is using right now. Some of these might be holding a database you love.",
              note: "This runs docker volume prune. It can't be undone and nothing goes to the Trash.") {
@@ -146,6 +186,90 @@ enum Rules {
 
 enum Editors {
     static let all = ["Code", "Code - Insiders", "Cursor", "Windsurf", "VSCodium"]
+}
+
+// MARK: - Browser & chat app caches
+
+enum WebCaches {
+    /// Cache folders Chromium and Electron apps keep inside Application Support.
+    static let cacheNames: Set<String> = ["Cache", "Code Cache", "GPUCache", "DawnCache", "DawnGraphiteCache",
+                                          "DawnWebGPUCache", "GrShaderCache", "ShaderCache"]
+
+    static func scan() async -> [Found] {
+        let root = FS.url("Library/Application Support")
+        let skip = Set(Editors.all)  // Code Editor Leftovers covers these.
+        var hits: [(url: URL, name: String, detail: String?)] = []
+        for app in FS.children(of: root) where FS.isRealDir(app) {
+            let name = app.lastPathComponent
+            guard !skip.contains(name), !name.hasPrefix("com.apple.") else { continue }
+            walk(app, trail: [name], depth: 0, into: &hits)
+        }
+        return await FS.sized(hits) { .delete($0) }
+    }
+
+    /// Browsers nest caches per profile (Google/Chrome/Default/Code Cache), so look a few levels down.
+    private static func walk(_ dir: URL, trail: [String], depth: Int, into hits: inout [(url: URL, name: String, detail: String?)]) {
+        guard depth <= 3 else { return }
+        let kids = FS.children(of: dir).filter(FS.isRealDir)
+        // A bare "Cache" folder only counts inside a Chromium/Electron data folder, which always has these too.
+        let chromium = kids.contains { ["Code Cache", "GPUCache", "Local Storage"].contains($0.lastPathComponent) }
+        for child in kids {
+            let n = child.lastPathComponent
+            let path = trail + [n]
+            if cacheNames.contains(n) && (n != "Cache" || chromium) {
+                hits.append((child, path.joined(separator: " › "), nil))
+            } else if n == "Service Worker" {
+                let storage = child.appending(path: "CacheStorage")
+                if FS.isDir(storage) { hits.append((storage, (path + ["CacheStorage"]).joined(separator: " › "), nil)) }
+            } else if !n.hasSuffix(".app") {
+                walk(child, trail: path, depth: depth + 1, into: &hits)
+            }
+        }
+    }
+}
+
+// MARK: - Downloads & screenshots
+
+enum Downloads {
+    static let installerExts: Set<String> = ["dmg", "pkg", "mpkg", "xip", "iso"]
+
+    static func forgotten(olderThanDays days: Int = 60) async -> [Found] {
+        let cutoff = Date.now.addingTimeInterval(-Double(days) * 86_400)
+        let fmt = RelativeDateTimeFormatter()
+        fmt.unitsStyle = .full
+        let old = FS.children(of: FS.url("Downloads")).filter { u in
+            guard !installerExts.contains(u.pathExtension.lowercased()),  // Old Installers covers these.
+                  let added = FS.addedDate(u) else { return false }
+            return added < cutoff
+        }
+        return await FS.sized(old.map { u in
+            let when = FS.addedDate(u).map { "Added \(fmt.localizedString(for: $0, relativeTo: .now))" } ?? ""
+            return (u, u.lastPathComponent, "\(when) · ~/Downloads")
+        }) { .trash($0) }
+    }
+}
+
+enum Screenshots {
+    static let prefixes = ["Screenshot", "Screen Shot", "Screen Recording", "CleanShot"]
+    static let exts: Set<String> = ["png", "jpg", "jpeg", "heic", "tiff", "gif", "mov", "mp4"]
+
+    static func scan() async -> [Found] {
+        var dirs = [FS.url("Desktop"), FS.url("Downloads"), FS.url("Pictures/Screenshots")]
+        // People who moved their screenshot folder (Screenshot app → Options → Save to).
+        if let custom = UserDefaults(suiteName: "com.apple.screencapture")?.string(forKey: "location") {
+            dirs.append(URL(fileURLWithPath: (custom as NSString).expandingTildeInPath))
+        }
+        var seen = Set<String>()
+        var files: [(url: URL, name: String, detail: String?)] = []
+        for dir in dirs where seen.insert(dir.standardizedFileURL.path).inserted {
+            for f in FS.children(of: dir)
+            where exts.contains(f.pathExtension.lowercased())
+                && prefixes.contains(where: { f.lastPathComponent.hasPrefix($0) }) {
+                files.append((f, f.lastPathComponent, FS.pretty(dir)))
+            }
+        }
+        return await FS.sized(files, minSize: 1) { .trash($0) }
+    }
 }
 
 // MARK: - Projects

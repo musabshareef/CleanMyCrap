@@ -152,7 +152,3 @@ struct Quips: View {
         .clipped()
     }
 }
-
-func revealInFinder(_ url: URL) {
-    NSWorkspace.shared.activateFileViewerSelecting([url])
-}

@@ -30,6 +30,16 @@ enum FS {
         (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) != nil
     }
 
+    /// Without Full Disk Access, reading other apps' containers pops a privacy prompt per app.
+    /// Rules that need those places check this first and skip quietly instead.
+    static var hasFullDiskAccess: Bool { canList(url(".Trash")) }
+
+    /// When a file landed in its folder (falls back to its modification date).
+    static func addedDate(_ url: URL) -> Date? {
+        let v = try? url.resourceValues(forKeys: [.addedToDirectoryDateKey, .contentModificationDateKey])
+        return v?.addedToDirectoryDate ?? v?.contentModificationDate
+    }
+
     /// Bytes actually used on disk.
     static func size(of url: URL) -> Int64 {
         let keys: Set<URLResourceKey> = [.totalFileAllocatedSizeKey, .fileAllocatedSizeKey,

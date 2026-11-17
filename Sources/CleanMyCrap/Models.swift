@@ -123,6 +123,17 @@ final class CleanupCategory: Identifiable {
     func setAll(_ on: Bool) {
         for i in items.indices { items[i].isSelected = on }
     }
+
+    func set(_ ids: Set<CleanupItem.ID>, _ on: Bool) {
+        for i in items.indices where ids.contains(items[i].id) { items[i].isSelected = on }
+    }
+
+    func binding(for id: CleanupItem.ID) -> Binding<Bool> {
+        Binding(
+            get: { self.items.first { $0.id == id }?.isSelected ?? false },
+            set: { on in self.set([id], on) }
+        )
+    }
 }
 
 struct Rule: Sendable {
