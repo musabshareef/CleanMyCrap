@@ -69,12 +69,10 @@ struct ScanningView: View {
                 }
                 .frame(width: 230, height: 230)
                 .padding(26)
-                .glassEffect(in: .circle)
 
                 Quips(lines: Copy.scanning)
 
-                GlassEffectContainer(spacing: 8) {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: 8)], spacing: 8) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: 8)], spacing: 8) {
                         ForEach(Rules.all, id: \.id) { rule in
                             let done = model.finishedRules.contains(rule.id)
                             HStack(spacing: 8) {
@@ -96,8 +94,7 @@ struct ScanningView: View {
                             .font(.callout)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .glassEffect(in: .capsule)
-                        }
+                            .card(in: Capsule())
                     }
                 }
                 .frame(maxWidth: 900)
@@ -131,7 +128,7 @@ struct CleaningView: View {
                 }
                 .frame(width: 380)
                 .padding(20)
-                .glassEffect(in: .rect(cornerRadius: 22))
+                .card(cornerRadius: 18)
             }
             .padding(40)
         }
@@ -164,12 +161,10 @@ struct DoneView: View {
                     }
 
                     if let report {
-                        GlassEffectContainer(spacing: 12) {
-                            HStack(spacing: 12) {
-                                stat("Free before", report.freeBefore.bytes, "internaldrive")
-                                stat("Free now", report.freeAfter.bytes, "internaldrive.fill")
-                                stat("Items flushed", "\(report.itemCount - report.failures.count)", "drop.fill")
-                            }
+                        HStack(spacing: 12) {
+                            stat("Free before", report.freeBefore.bytes, "internaldrive")
+                            stat("Free now", report.freeAfter.bytes, "internaldrive.fill")
+                            stat("Items flushed", "\(report.itemCount - report.failures.count)", "drop.fill")
                         }
 
                         VStack(alignment: .leading, spacing: 10) {
@@ -197,7 +192,7 @@ struct DoneView: View {
                                         .foregroundStyle(.orange)
                                 }
                                 .padding(14)
-                                .glassEffect(in: .rect(cornerRadius: 16))
+                                .card()
                             }
                         }
                         .frame(maxWidth: 560)
@@ -235,7 +230,7 @@ struct DoneView: View {
             Text(title).font(.caption).foregroundStyle(.secondary)
         }
         .frame(width: 160, height: 104)
-        .glassEffect(in: .rect(cornerRadius: 20))
+        .card()
     }
 
     private func callout(_ icon: String, _ color: Color, _ text: String) -> some View {
@@ -245,6 +240,6 @@ struct DoneView: View {
             Spacer(minLength: 0)
         }
         .padding(14)
-        .glassEffect(in: .rect(cornerRadius: 16))
+        .card()
     }
 }

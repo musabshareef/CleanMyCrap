@@ -23,6 +23,27 @@ struct AmbientBackground: View {
     }
 }
 
+/// A flat content surface. Liquid Glass is reserved for controls and navigation
+/// (per the HIG), so content groups use a quiet fill and a hairline edge instead.
+struct CardBackground<S: InsettableShape>: View {
+    var shape: S
+
+    var body: some View {
+        shape.fill(.quinary)
+            .overlay(shape.strokeBorder(.separator.opacity(0.6), lineWidth: 0.5))
+    }
+}
+
+extension View {
+    func card(cornerRadius: CGFloat = 16) -> some View {
+        background(CardBackground(shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)))
+    }
+
+    func card<S: InsettableShape>(in shape: S) -> some View {
+        background(CardBackground(shape: shape))
+    }
+}
+
 /// The app icon itself, doing a little performance.
 struct Mascot: View {
     enum Mood { case idle, flushing, proud }
@@ -77,7 +98,7 @@ struct RiskBadge: View {
     }
 }
 
-/// Used vs free, as a glassy capsule.
+/// Used vs free.
 struct DiskGauge: View {
     let disk: DiskInfo
 
@@ -104,7 +125,7 @@ struct DiskGauge: View {
         }
         .padding(18)
         .frame(width: 440)
-        .glassEffect(in: .rect(cornerRadius: 22))
+        .card(cornerRadius: 18)
     }
 
     private var barColors: [Color] {

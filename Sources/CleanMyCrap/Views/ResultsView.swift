@@ -144,10 +144,8 @@ struct OverviewView: View {
                     FullDiskAccessBanner()
                 }
 
-                GlassEffectContainer(spacing: 16) {
-                    HStack(alignment: .top, spacing: 16) {
-                        ForEach(Risk.allCases) { RiskCard(risk: $0) }
-                    }
+                HStack(alignment: .top, spacing: 16) {
+                    ForEach(Risk.allCases) { RiskCard(risk: $0) }
                 }
 
                 BiggestOffenders(selection: $selection)
@@ -198,15 +196,13 @@ struct RiskCard: View {
                     .contentTransition(.numericText())
                 Spacer()
                 Button(allOn ? "Deselect" : "Select All") { model.select(risk, !allOn) }
-                    .buttonStyle(.glass)
-                    .tint(risk.color)
                     .controlSize(.small)
                     .disabled(total == 0)
             }
         }
         .padding(20)
         .frame(maxWidth: .infinity, minHeight: 250, alignment: .topLeading)
-        .glassEffect(.regular.tint(risk.color.opacity(0.05)), in: .rect(cornerRadius: 26))
+        .card(cornerRadius: 20)
     }
 }
 
@@ -259,7 +255,7 @@ struct BiggestOffenders: View {
                     }
                 }
                 .padding(.vertical, 4)
-                .glassEffect(in: .rect(cornerRadius: 20))
+                .card()
             }
         }
     }
@@ -300,10 +296,9 @@ struct FullDiskAccessBanner: View {
                     NSWorkspace.shared.open(url)
                 }
             }
-            .buttonStyle(.glass)
         }
         .padding(18)
-        .glassEffect(in: .rect(cornerRadius: 20))
+        .card()
     }
 }
 
@@ -321,7 +316,7 @@ struct CategoryDetailView: View {
                         .font(.system(size: 30))
                         .foregroundStyle(category.risk.color)
                         .frame(width: 68, height: 68)
-                        .glassEffect(.regular.tint(category.risk.color.opacity(0.14)), in: .rect(cornerRadius: 18))
+                        .background(category.risk.color.opacity(0.12), in: .rect(cornerRadius: 16, style: .continuous))
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 10) {
                             Text(category.name).font(.largeTitle.weight(.bold))
@@ -347,7 +342,7 @@ struct CategoryDetailView: View {
                         .font(.callout)
                         .padding(14)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .glassEffect(in: .rect(cornerRadius: 14))
+                        .card(cornerRadius: 12)
                 }
 
                 HStack {
@@ -361,7 +356,6 @@ struct CategoryDetailView: View {
                     Button("Select None") { withAnimation(.snappy) { category.setAll(false) } }
                         .disabled(category.selectedCount == 0)
                 }
-                .buttonStyle(.glass)
 
                 LazyVStack(spacing: 0) {
                     ForEach($category.items) { $item in
@@ -370,7 +364,7 @@ struct CategoryDetailView: View {
                     }
                 }
                 .padding(.vertical, 4)
-                .glassEffect(in: .rect(cornerRadius: 20))
+                .card()
             }
             .padding(32)
             .padding(.bottom, 20)
