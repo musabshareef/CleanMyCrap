@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clean My Crap</title>
+<meta name="description" content="Your Mac is full of crap. Find it, sort it, and flush it. Free.">
+<link rel="icon" href="icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --text: #1d1d1f; --muted: #6e6e73; --card: #f5f5f7; --line: #d2d2d7;
+    --accent: #ed6170; --accent-text: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #000000; --text: #f5f5f7; --muted: #a1a1a6; --card: #1c1c1e; --line: #38383a; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 72px 20px 48px; }
+  .hero { text-align: center; }
+  .hero img { width: 144px; height: 144px; }
+  h1 { font: 700 48px/1.1 ui-rounded, -apple-system, sans-serif; margin: 20px 0 10px; letter-spacing: -0.02em; }
+  .tagline { font-size: 21px; color: var(--muted); margin: 0 0 28px; }
+  .download {
+    display: inline-flex; align-items: center; gap: 8px; padding: 13px 26px; border-radius: 999px;
+    background: var(--accent); color: var(--accent-text); font-weight: 600; text-decoration: none; font-size: 18px;
+  }
+  .download:hover { filter: brightness(1.07); }
+  .fineprint { color: var(--muted); font-size: 14px; margin-top: 12px; }
+  .fineprint a { color: inherit; }
+  h2 { font-size: 24px; margin: 56px 0 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .card { background: var(--card); border-radius: 16px; padding: 18px 20px; }
+  .card strong { display: block; margin-bottom: 4px; }
+  .card span { color: var(--muted); font-size: 15px; }
+  pre {
+    background: var(--card); border-radius: 12px; padding: 16px 18px; overflow-x: auto;
+    font: 14px/1.6 ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; text-align: center; }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <img src="icon.png" alt="Clean My Crap icon">
+    <h1>Clean My Crap</h1>
+    <p class="tagline">Your Mac is full of crap. Let's find it, sort it, and flush it.</p>
+    <a class="download" href="https://github.com/musabshareef/CleanMyCrap/releases/latest/download/Clean-My-Crap.dmg">Download for Mac</a>
+    <p class="fineprint">Free · macOS 26 or later · Apple silicon and Intel · Signed and notarized by Apple<br>
+      Updates itself. <a href="https://github.com/musabshareef/CleanMyCrap/releases">All releases</a></p>
+  </section>
+
+  <h2>What it does</h2>
+  <div class="grid">
+    <div class="card"><strong>Sorted by risk</strong><span>Definitely Crap, Probably Crap, Might Be Treasure. Only the safe stuff is picked for you.</span></div>
+    <div class="card"><strong>Nothing deleted until you say so</strong><span>Risky things go to the Trash, so you can fish them back out.</span></div>
+    <div class="card"><strong>Evict an app</strong><span>Drop an app on the window. It leaves with everything it scattered around your Mac.</span></div>
+    <div class="card"><strong>Ghosts of apps past</strong><span>Settings and caches from apps you deleted ages ago.</span></div>
+    <div class="card"><strong>Apps you forgot you had</strong><span>Everything you haven't opened in six months, with its size.</span></div>
+    <div class="card"><strong>For developers too</strong><span>Xcode, simulators, Docker, node_modules, Gradle, AI models and more.</span></div>
+  </div>
+
+  <h2>From the command line</h2>
+  <p>Install it from <em>Clean My Crap → Install Command Line Tool…</em>, then:</p>
+  <pre>crap scan            # what's taking up space
+crap flush --safe    # dry run; add --yes to do it
+crap apps --forgotten
+crap evict Blender --yes
+crap scan --json     # for scripts and AI agents</pre>
+
+  <footer>
+    <a href="https://github.com/musabshareef/CleanMyCrap/issues/new">Send feedback</a> ·
+    <a href="https://github.com/musabshareef/CleanMyCrap">Source on GitHub</a><br>
+    No crap was harmed. Okay, some was.
+  </footer>
+</main>
+</body>
+</html>

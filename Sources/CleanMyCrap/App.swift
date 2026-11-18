@@ -17,8 +17,15 @@ struct CleanMyCrapApp: App {
         .windowToolbarStyle(.unified)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandGroup(after: .appInfo) {
+                CheckForUpdatesButton()
+            }
             CommandGroup(after: .appSettings) {
                 Button("Install Command Line Tool…") { Task { await CommandLineTool.install() } }
+            }
+            CommandGroup(replacing: .help) {
+                Button("Send Feedback…") { Feedback.send() }
+                Button("Clean My Crap on GitHub") { NSWorkspace.shared.open(Feedback.repo) }
             }
             CommandGroup(after: .sidebar) {
                 Button("Crap") { model.section = .crap }.keyboardShortcut("1")
@@ -41,6 +48,7 @@ struct CleanMyCrapApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        _ = Updates.shared  // Start Sparkle's background checks.
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()
     }

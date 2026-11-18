@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Clean My Crap</title>
+    <link>https://musabshareef.github.io/CleanMyCrap/appcast.xml</link>
+    <description>Updates for Clean My Crap</description>
+    <language>en</language>
+    <!-- releases: newest first -->
+  </channel>
+</rss>
