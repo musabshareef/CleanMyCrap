@@ -1,4 +1,5 @@
 import AppKit
+import CrapCore
 import SwiftUI
 
 /// The Apps side: everything installed, how long since you used it, and evicting it with its crap.
@@ -161,7 +162,7 @@ final class EvictionPlan {
         refreshRunning()
         guard !isRunning else { return }
         evicting = true
-        let chosen = items.filter(\.isSelected)
+        let chosen = items.filter(\.isSelected).map { Found(name: $0.name, detail: $0.detail, size: $0.size, removal: $0.removal) }
         let app = self.app
         let result = await Evictor.evict(app: app, items: chosen)
         withAnimation(.smooth) {

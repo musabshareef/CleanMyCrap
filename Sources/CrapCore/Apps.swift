@@ -3,33 +3,33 @@ import Security
 
 // MARK: - Installed apps
 
-struct InstalledApp: Identifiable, Hashable, Sendable {
-    var id: String { url.path }
-    let url: URL
-    let name: String
+public struct InstalledApp: Identifiable, Hashable, Sendable {
+    public var id: String { url.path }
+    public let url: URL
+    public let name: String
     /// Every name the app might file its stuff under (file name, CFBundleName, executable…).
-    let aliases: Set<String>
-    let bundleID: String
-    let version: String?
-    let lastUsed: Date?
-    let added: Date?
+    public let aliases: Set<String>
+    public let bundleID: String
+    public let version: String?
+    public let lastUsed: Date?
+    public let added: Date?
 
     /// Not opened in this long means you forgot you had it.
-    static let forgottenAfter: TimeInterval = 180 * 86_400
+    public static let forgottenAfter: TimeInterval = 180 * 86_400
 
-    var isForgotten: Bool {
+    public var isForgotten: Bool {
         // Never opened counts too, as long as it's been sitting there a while.
         guard let reference = lastUsed ?? added else { return false }
         return reference < .now.addingTimeInterval(-Self.forgottenAfter)
     }
 
-    var lastUsedText: String {
+    public var lastUsedText: String {
         guard let lastUsed else { return "Never opened" }
         let ago = lastUsed.formatted(.relative(presentation: .named))
         return isForgotten ? "Last opened \(ago)" : "Opened \(ago)"
     }
 
-    init?(url: URL) {
+    public init?(url: URL) {
         guard FS.isRealDir(url), let bundle = Bundle(url: url),
               let id = bundle.bundleIdentifier, !id.isEmpty else { return nil }
         let info = bundle.infoDictionary ?? [:]
@@ -46,11 +46,11 @@ struct InstalledApp: Identifiable, Hashable, Sendable {
     }
 }
 
-enum AppInventory {
-    static let roots = [URL(fileURLWithPath: "/Applications"), FS.url("Applications")]
+public enum AppInventory {
+    public static let roots = [URL(fileURLWithPath: "/Applications"), FS.url("Applications")]
 
     /// Apps in /Applications and ~/Applications, one folder deep (Utilities, "Chrome Apps"…).
-    static func scan() -> [InstalledApp] {
+    public static func scan() -> [InstalledApp] {
         let own = Bundle.main.bundleIdentifier ?? "com.cleanmycrap.app"
         var out: [InstalledApp] = []
         func collect(_ dir: URL, depth: Int) {
@@ -69,9 +69,9 @@ enum AppInventory {
 
 // MARK: - Leftovers of one app
 
-enum Leftovers {
+public enum Leftovers {
     /// Where apps scatter their stuff in ~/Library, and what to call each place.
-    static let places: [(dir: String, kind: String, byName: Bool)] = [
+    public static let places: [(dir: String, kind: String, byName: Bool)] = [
         ("Application Support", "Application Support", true),
         ("Caches", "Cache", true),
         ("Logs", "Logs", true),
@@ -85,9 +85,9 @@ enum Leftovers {
         ("LaunchAgents", "Starts at login", false),
     ]
 
-    static let strippedExtensions: Set<String> = ["plist", "savedState", "binarycookies"]
+    public static let strippedExtensions: Set<String> = ["plist", "savedState", "binarycookies"]
 
-    static func find(for app: InstalledApp) async -> [Found] {
+    public static func find(for app: InstalledApp) async -> [Found] {
         let library = FS.url("Library")
         let signing = signingInfo(app.url)
         let names = Set(app.aliases.map { $0.lowercased() })
@@ -129,7 +129,7 @@ enum Leftovers {
     }
 
     /// The app's team and the shared app-group containers it's entitled to.
-    static func signingInfo(_ url: URL) -> (team: String?, groups: [String]) {
+    public static func signingInfo(_ url: URL) -> (team: String?, groups: [String]) {
         var code: SecStaticCode?
         guard SecStaticCodeCreateWithPath(url as CFURL, [], &code) == errSecSuccess, let code else { return (nil, []) }
         var info: CFDictionary?
@@ -143,8 +143,8 @@ enum Leftovers {
 
 // MARK: - Ghosts: leftovers of apps that are already gone
 
-enum Ghosts {
-    static let places: [(dir: String, kind: String)] = [
+public enum Ghosts {
+    public static let places: [(dir: String, kind: String)] = [
         ("Application Support", "Application Support"),
         ("Caches", "Cache"),
         ("Preferences", "Preferences"),
@@ -157,18 +157,18 @@ enum Ghosts {
     ]
 
     /// Reverse-DNS names that belong to tools and frameworks, not apps.
-    static let notApps = ["com.apple.", "group.", "org.swift.", "org.llvm.", "org.sparkle-project.",
+    public static let notApps = ["com.apple.", "group.", "org.swift.", "org.llvm.", "org.sparkle-project.",
                           "com.crashlytics", "io.sentry", "com.plausiblelabs.", "org.python.", "org.nodejs.",
                           "sh.brew", "org.homebrew", "com.google.keystone", "com.microsoft.autoupdate",
                           "com.bugsnag", "com.segment.", "com.tcltk.", "org.cups.", "org.webkit.",
                           "org.codehaus.", "com.cleanmycrap."]
 
     /// Something touched in the last two weeks is clearly still haunted by a living app.
-    static let quietFor: TimeInterval = 14 * 86_400
+    public static let quietFor: TimeInterval = 14 * 86_400
 
     nonisolated(unsafe) private static let reverseDNS = try! Regex(#"[a-z]{2,6}\.[A-Za-z0-9\-]+\.[A-Za-z0-9\-_.]+"#)
 
-    static func scan() async -> [Found] {
+    public static func scan() async -> [Found] {
         let installed = AppInventory.scan().map { $0.bundleID.lowercased() }
         // Same vendor as something installed (com.microsoft.*): probably a helper, leave it.
         let vendors = Set(installed.map { $0.split(separator: ".").prefix(2).joined(separator: ".") })
@@ -222,14 +222,14 @@ enum Ghosts {
 
 // MARK: - Eviction
 
-enum Evictor {
-    struct Outcome: Sendable {
-        var freed: Int64 = 0
-        var failures: [String] = []
-        var appGone = false
+public enum Evictor {
+    public struct Outcome: Sendable {
+        public var freed: Int64 = 0
+        public var failures: [String] = []
+        public var appGone = false
     }
 
-    static func evict(app: InstalledApp, items: [CleanupItem]) async -> Outcome {
+    public static func evict(app: InstalledApp, items: [Found]) async -> Outcome {
         var outcome = Outcome()
         for item in items {
             guard let url = item.removal.url else { continue }

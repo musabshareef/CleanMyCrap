@@ -1,4 +1,5 @@
 import SwiftUI
+import CrapCore
 
 struct AppsView: View {
     @Environment(AppModel.self) private var model

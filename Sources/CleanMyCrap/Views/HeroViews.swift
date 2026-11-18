@@ -1,4 +1,5 @@
 import SwiftUI
+import CrapCore
 
 // MARK: - Before the first scan (Overview pane)
 

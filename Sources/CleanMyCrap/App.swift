@@ -1,4 +1,5 @@
 import SwiftUI
+import CrapCore
 
 @main
 struct CleanMyCrapApp: App {
@@ -16,6 +17,9 @@ struct CleanMyCrapApp: App {
         .windowToolbarStyle(.unified)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandGroup(after: .appSettings) {
+                Button("Install Command Line Tool…") { Task { await CommandLineTool.install() } }
+            }
             CommandGroup(after: .sidebar) {
                 Button("Crap") { model.section = .crap }.keyboardShortcut("1")
                 Button("Apps") { model.section = .apps }.keyboardShortcut("2")

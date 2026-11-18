@@ -1,4 +1,5 @@
 import Foundation
+import CrapCore
 
 /// All the jokes live here, so they're easy to keep (or regret).
 enum Copy {

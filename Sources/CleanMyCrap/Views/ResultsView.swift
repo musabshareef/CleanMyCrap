@@ -1,4 +1,5 @@
 import SwiftUI
+import CrapCore
 
 enum SidebarItem: Hashable {
     case overview

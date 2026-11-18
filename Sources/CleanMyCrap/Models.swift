@@ -1,45 +1,7 @@
 import SwiftUI
+import CrapCore
 
-// MARK: - Risk
-
-enum Risk: Int, CaseIterable, Identifiable, Comparable, Sendable {
-    case safe, low, high
-
-    var id: Int { rawValue }
-    static func < (a: Risk, b: Risk) -> Bool { a.rawValue < b.rawValue }
-
-    var title: String {
-        switch self {
-        case .safe: "Definitely Crap"
-        case .low: "Probably Crap"
-        case .high: "Might Be Treasure"
-        }
-    }
-
-    var shortLabel: String {
-        switch self {
-        case .safe: "Safe"
-        case .low: "Low Risk"
-        case .high: "High Risk"
-        }
-    }
-
-    var blurb: String {
-        switch self {
-        case .safe: "Grows back on its own. Nobody will miss it, least of all you."
-        case .low: "Comes back when needed, but your next build or download will be slower."
-        case .high: "Could be something you care about. Look before you flush."
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .safe: "checkmark.seal.fill"
-        case .low: "exclamationmark.circle.fill"
-        case .high: "exclamationmark.triangle.fill"
-        }
-    }
-
+extension Risk {
     var color: Color {
         switch self {
         case .safe: .green
@@ -47,50 +9,6 @@ enum Risk: Int, CaseIterable, Identifiable, Comparable, Sendable {
         case .high: .red
         }
     }
-}
-
-// MARK: - Removal
-
-struct Command: Sendable, Hashable {
-    var executable: String
-    var arguments: [String]
-    var allowFailure = false
-}
-
-enum Removal: Sendable, Hashable {
-    /// Permanently delete. Used for stuff that regenerates.
-    case delete(URL)
-    /// Move to the Trash. Used for high-risk stuff, so it can be fished back out.
-    case trash(URL)
-    /// Move several places to the Trash as one item (an old app's scattered leftovers).
-    case trashAll([URL])
-    /// Run tool commands (Docker, simctl…).
-    case commands([Command])
-
-    var url: URL? { urls.first }
-
-    var urls: [URL] {
-        switch self {
-        case .delete(let u), .trash(let u): [u]
-        case .trashAll(let us): us
-        case .commands: []
-        }
-    }
-
-    var isTrash: Bool {
-        switch self {
-        case .trash, .trashAll: true
-        default: false
-        }
-    }
-}
-
-/// What a scan rule hands back. Sendable so rules can run off the main actor.
-struct Found: Sendable {
-    var name: String
-    var detail: String?
-    var size: Int64
-    var removal: Removal
 }
 
 struct CleanupItem: Identifiable, Hashable {
@@ -146,36 +64,6 @@ final class CleanupCategory: Identifiable {
     }
 }
 
-struct Rule: Sendable {
-    let id: String
-    let name: String
-    let icon: String
-    let risk: Risk
-    let explanation: String
-    var note: String? = nil
-    /// Categories smaller than this stay hidden.
-    var minTotal: Int64 = 1 << 20
-    let scan: @Sendable () async -> [Found]
-}
-
-// MARK: - Disk
-
-struct DiskInfo: Equatable {
-    var total: Int64
-    var free: Int64
-
-    var used: Int64 { max(total - free, 0) }
-    var usedFraction: Double { total > 0 ? Double(used) / Double(total) : 0 }
-
-    static func current() -> DiskInfo {
-        let url = URL(fileURLWithPath: NSHomeDirectory())
-        let v = try? url.resourceValues(forKeys: [.volumeTotalCapacityKey,
-                                                  .volumeAvailableCapacityForImportantUsageKey])
-        return DiskInfo(total: Int64(v?.volumeTotalCapacity ?? 0),
-                        free: v?.volumeAvailableCapacityForImportantUsage ?? 0)
-    }
-}
-
 struct CleanReport {
     struct Failure: Identifiable { let id = UUID(); var name: String; var reason: String }
     var freed: Int64
@@ -187,11 +75,3 @@ struct CleanReport {
     var touchedDocker: Bool
 }
 
-extension Int64 {
-    var bytes: String {
-        let f = ByteCountFormatter()
-        f.countStyle = .file
-        f.allowsNonnumericFormatting = false
-        return f.string(fromByteCount: self)
-    }
-}

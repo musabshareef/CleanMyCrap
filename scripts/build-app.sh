@@ -7,12 +7,14 @@ cd "$(dirname "$0")/.."
 
 ARCHS=(--arch arm64 --arch x86_64)
 swift build -c release $ARCHS
-BIN="$(swift build -c release $ARCHS --show-bin-path)/CleanMyCrap"
+BINDIR="$(swift build -c release $ARCHS --show-bin-path)"
 
 APP="build/Clean My Crap.app"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/CleanMyCrap"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Helpers"
+cp "$BINDIR/CleanMyCrap" "$APP/Contents/MacOS/CleanMyCrap"
+# The `crap` command-line tool rides along; the app's menu links it into /usr/local/bin.
+cp "$BINDIR/crap" "$APP/Contents/Helpers/crap"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 
 # Compile the Icon Composer icon (Resources/AppIcon.icon) into Assets.car + a legacy .icns.
@@ -21,10 +23,13 @@ xcrun actool Resources/AppIcon.icon --compile "$APP/Contents/Resources" \
   --output-partial-info-plist build/icon-partial.plist >/dev/null
 
 IDENTITY="${SIGN_IDENTITY:--}"
+# Nested code first (the helper), then the bundle that seals it.
 if [[ $IDENTITY == - ]]; then
+  codesign --force --sign - --identifier com.cleanmycrap.crap "$APP/Contents/Helpers/crap" >/dev/null
   codesign --force --sign - "$APP" >/dev/null
 else
   # Hardened runtime + secure timestamp are required for notarization.
+  codesign --force --options runtime --timestamp --identifier com.cleanmycrap.crap --sign "$IDENTITY" "$APP/Contents/Helpers/crap"
   codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP"
 fi
 echo "Built $APP"

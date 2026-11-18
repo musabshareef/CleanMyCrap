@@ -1,47 +1,47 @@
 import Foundation
 
 /// Blocking file-system helpers. Call them from background tasks, never the main actor.
-enum FS {
-    static let home = FileManager.default.homeDirectoryForCurrentUser
-    static let oneMB: Int64 = 1 << 20
+public enum FS {
+    public static let home = FileManager.default.homeDirectoryForCurrentUser
+    public static let oneMB: Int64 = 1 << 20
 
-    static func url(_ relative: String) -> URL { home.appending(path: relative) }
+    public static func url(_ relative: String) -> URL { home.appending(path: relative) }
 
-    static func isDir(_ url: URL) -> Bool {
+    public static func isDir(_ url: URL) -> Bool {
         var d: ObjCBool = false
         return FileManager.default.fileExists(atPath: url.path, isDirectory: &d) && d.boolValue
     }
 
-    static func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath: url.path) }
+    public static func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath: url.path) }
 
     /// A real directory, not a symlink pointing at one.
-    static func isRealDir(_ url: URL) -> Bool {
+    public static func isRealDir(_ url: URL) -> Bool {
         let v = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
         return v?.isDirectory == true && v?.isSymbolicLink != true
     }
 
-    static func children(of dir: URL, includeHidden: Bool = false) -> [URL] {
+    public static func children(of dir: URL, includeHidden: Bool = false) -> [URL] {
         let opts: FileManager.DirectoryEnumerationOptions = includeHidden ? [] : [.skipsHiddenFiles]
         return (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil,
                                                              options: opts)) ?? []
     }
 
-    static func canList(_ dir: URL) -> Bool {
+    public static func canList(_ dir: URL) -> Bool {
         (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) != nil
     }
 
     /// Without Full Disk Access, reading other apps' containers pops a privacy prompt per app.
     /// Rules that need those places check this first and skip quietly instead.
-    static var hasFullDiskAccess: Bool { canList(url(".Trash")) }
+    public static var hasFullDiskAccess: Bool { canList(url(".Trash")) }
 
     /// When a file landed in its folder (falls back to its modification date).
-    static func addedDate(_ url: URL) -> Date? {
+    public static func addedDate(_ url: URL) -> Date? {
         let v = try? url.resourceValues(forKeys: [.addedToDirectoryDateKey, .contentModificationDateKey])
         return v?.addedToDirectoryDate ?? v?.contentModificationDate
     }
 
     /// Bytes actually used on disk.
-    static func size(of url: URL) -> Int64 {
+    public static func size(of url: URL) -> Int64 {
         let keys: Set<URLResourceKey> = [.totalFileAllocatedSizeKey, .fileAllocatedSizeKey,
                                          .isRegularFileKey, .isSymbolicLinkKey]
         guard let top = try? url.resourceValues(forKeys: keys.union([.isDirectoryKey])) else { return 0 }
@@ -61,13 +61,13 @@ enum FS {
     }
 
     /// "~/Library/Caches/foo" style path for display.
-    static func pretty(_ url: URL) -> String {
+    public static func pretty(_ url: URL) -> String {
         let p = url.path
         return p.hasPrefix(home.path) ? "~" + p.dropFirst(home.path.count) : p
     }
 
     /// Sizes many URLs concurrently and returns the ones above `minSize`.
-    static func sized(_ entries: [(url: URL, name: String, detail: String?)],
+    public static func sized(_ entries: [(url: URL, name: String, detail: String?)],
                       minSize: Int64 = oneMB,
                       removal: @escaping @Sendable (URL) -> Removal) async -> [Found] {
         await withTaskGroup(of: Found?.self) { group in
@@ -86,7 +86,7 @@ enum FS {
     }
 
     /// Each child of `dir` becomes its own item.
-    static func sizedChildren(of dir: URL, includeHidden: Bool = false, minSize: Int64 = oneMB,
+    public static func sizedChildren(of dir: URL, includeHidden: Bool = false, minSize: Int64 = oneMB,
                               exclude: Set<String> = [],
                               removal: @escaping @Sendable (URL) -> Removal) async -> [Found] {
         let kids = children(of: dir, includeHidden: includeHidden)
@@ -95,17 +95,17 @@ enum FS {
     }
 
     /// The listed paths that exist, each as one item.
-    static func sizedPaths(_ paths: [(String, String)], minSize: Int64 = oneMB,
+    public static func sizedPaths(_ paths: [(String, String)], minSize: Int64 = oneMB,
                            removal: @escaping @Sendable (URL) -> Removal) async -> [Found] {
         let entries = paths.map { (url($0.0), $0.1) }.filter { exists($0.0) }
         return await sized(entries.map { ($0.0, $0.1, nil) }, minSize: minSize, removal: removal)
     }
 }
 
-enum Shell {
-    struct Result: Sendable { var status: Int32; var output: String }
+public enum Shell {
+    public struct Result: Sendable { public var status: Int32; public var output: String }
 
-    static func run(_ exe: String, _ args: [String], timeout: TimeInterval = 300) async -> Result {
+    public static func run(_ exe: String, _ args: [String], timeout: TimeInterval = 300) async -> Result {
         await withCheckedContinuation { cont in
             DispatchQueue.global(qos: .userInitiated).async {
                 let p = Process()

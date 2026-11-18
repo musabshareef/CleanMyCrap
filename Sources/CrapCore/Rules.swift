@@ -1,8 +1,8 @@
 import Foundation
 
 /// Every place we go sniffing. Order here is the order shown while scanning.
-enum Rules {
-    static let all: [Rule] = [
+public enum Rules {
+    public static let all: [Rule] = [
         // MARK: Safe — grows back, preselected
         Rule(id: "caches", name: "App Caches", icon: "archivebox.fill", risk: .safe,
              explanation: "Apps stash temporary files in ~/Library/Caches and rebuild them whenever they feel like it.") {
@@ -189,18 +189,18 @@ enum Rules {
     ]
 }
 
-enum Editors {
-    static let all = ["Code", "Code - Insiders", "Cursor", "Windsurf", "VSCodium"]
+public enum Editors {
+    public static let all = ["Code", "Code - Insiders", "Cursor", "Windsurf", "VSCodium"]
 }
 
 // MARK: - Browser & chat app caches
 
-enum WebCaches {
+public enum WebCaches {
     /// Cache folders Chromium and Electron apps keep inside Application Support.
-    static let cacheNames: Set<String> = ["Cache", "Code Cache", "GPUCache", "DawnCache", "DawnGraphiteCache",
+    public static let cacheNames: Set<String> = ["Cache", "Code Cache", "GPUCache", "DawnCache", "DawnGraphiteCache",
                                           "DawnWebGPUCache", "GrShaderCache", "ShaderCache"]
 
-    static func scan() async -> [Found] {
+    public static func scan() async -> [Found] {
         let root = FS.url("Library/Application Support")
         let skip = Set(Editors.all)  // Code Editor Leftovers covers these.
         var hits: [(url: URL, name: String, detail: String?)] = []
@@ -235,10 +235,10 @@ enum WebCaches {
 
 // MARK: - Downloads & screenshots
 
-enum Downloads {
-    static let installerExts: Set<String> = ["dmg", "pkg", "mpkg", "xip", "iso"]
+public enum Downloads {
+    public static let installerExts: Set<String> = ["dmg", "pkg", "mpkg", "xip", "iso"]
 
-    static func forgotten(olderThanDays days: Int = 60) async -> [Found] {
+    public static func forgotten(olderThanDays days: Int = 60) async -> [Found] {
         let cutoff = Date.now.addingTimeInterval(-Double(days) * 86_400)
         let fmt = RelativeDateTimeFormatter()
         fmt.unitsStyle = .full
@@ -254,11 +254,11 @@ enum Downloads {
     }
 }
 
-enum Screenshots {
-    static let prefixes = ["Screenshot", "Screen Shot", "Screen Recording", "CleanShot"]
-    static let exts: Set<String> = ["png", "jpg", "jpeg", "heic", "tiff", "gif", "mov", "mp4"]
+public enum Screenshots {
+    public static let prefixes = ["Screenshot", "Screen Shot", "Screen Recording", "CleanShot"]
+    public static let exts: Set<String> = ["png", "jpg", "jpeg", "heic", "tiff", "gif", "mov", "mp4"]
 
-    static func scan() async -> [Found] {
+    public static func scan() async -> [Found] {
         var dirs = [FS.url("Desktop"), FS.url("Downloads"), FS.url("Pictures/Screenshots")]
         // People who moved their screenshot folder (Screenshot app → Options → Save to).
         if let custom = UserDefaults(suiteName: "com.apple.screencapture")?.string(forKey: "location") {
@@ -279,11 +279,11 @@ enum Screenshots {
 
 // MARK: - Projects
 
-enum Projects {
-    static let roots = ["Projects", "Developer", "Code", "code", "src", "dev", "Documents/GitHub",
+public enum Projects {
+    public static let roots = ["Projects", "Developer", "Code", "code", "src", "dev", "Documents/GitHub",
                         "GitHub", "repos", "workspace", "Sites"]
 
-    static func junk() async -> [Found] {
+    public static func junk() async -> [Found] {
         var seen = Set<String>()
         var hits: [(url: URL, name: String, detail: String?)] = []
         for r in roots {
@@ -335,25 +335,25 @@ enum Projects {
 
 // MARK: - Docker
 
-struct DockerUsage: Sendable {
-    var exe: String
-    var buildCache: Int64 = 0
-    var images: Int64 = 0
-    var containers: Int64 = 0
-    var volumes: Int64 = 0
+public struct DockerUsage: Sendable {
+    public var exe: String
+    public var buildCache: Int64 = 0
+    public var images: Int64 = 0
+    public var containers: Int64 = 0
+    public var volumes: Int64 = 0
 }
 
-enum Docker {
+public enum Docker {
     /// One probe shared by every Docker rule in a scan.
-    nonisolated(unsafe) static var usage = Task { await probe() }
+    nonisolated(unsafe) public static var usage = Task { await probe() }
 
-    static func reset() { usage = Task { await probe() } }
+    public static func reset() { usage = Task { await probe() } }
 
-    static let candidates = ["/usr/local/bin/docker", "/opt/homebrew/bin/docker",
+    public static let candidates = ["/usr/local/bin/docker", "/opt/homebrew/bin/docker",
                              "/Applications/Docker.app/Contents/Resources/bin/docker",
                              FS.url(".docker/bin/docker").path, FS.url(".orbstack/bin/docker").path]
 
-    static func probe() async -> DockerUsage? {
+    public static func probe() async -> DockerUsage? {
         guard let exe = candidates.first(where: FileManager.default.isExecutableFile(atPath:)) else { return nil }
         let r = await Shell.run(exe, ["system", "df", "--format", "{{json .}}"], timeout: 20)
         guard r.status == 0 else { return nil }
@@ -375,7 +375,7 @@ enum Docker {
     }
 
     /// "20.1GB (100%)" → bytes. Docker uses decimal units.
-    static func parseSize(_ s: String) -> Int64 {
+    public static func parseSize(_ s: String) -> Int64 {
         let token = s.split(separator: " ").first.map(String.init) ?? s
         let number = token.prefix { $0.isNumber || $0 == "." }
         let unit = token.dropFirst(number.count).uppercased()
@@ -393,8 +393,8 @@ enum Docker {
 
 // MARK: - Simulators
 
-enum Simulators {
-    static func scan() async -> [Found] {
+public enum Simulators {
+    public static func scan() async -> [Found] {
         let devicesDir = FS.url("Library/Developer/CoreSimulator/Devices")
         guard FS.isDir(devicesDir) else { return [] }
         let r = await Shell.run("/usr/bin/xcrun", ["simctl", "list", "devices", "-j"], timeout: 60)
