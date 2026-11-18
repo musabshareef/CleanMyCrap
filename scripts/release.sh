@@ -25,6 +25,17 @@ echo "› Building and signing with: $IDENTITY"
 SIGN_IDENTITY="$IDENTITY" ./scripts/build-app.sh
 codesign --verify --strict --deep "$APP"
 
+if [[ ${SKIP_NOTARIZE:-} != 1 ]]; then
+  # Staple the app itself, not just the DMG: once it's copied to /Applications the DMG's ticket
+  # is gone, and without its own ticket a Mac that can't reach Apple's servers refuses to open it.
+  echo "› Notarizing the app (usually a few minutes)"
+  ZIP=$(mktemp -d)/app.zip
+  ditto -c -k --keepParent "$APP" "$ZIP"
+  xcrun notarytool submit "$ZIP" --keychain-profile "$PROFILE" --wait
+  xcrun stapler staple "$APP"
+  xcrun stapler validate "$APP"
+fi
+
 echo "› Packaging $DMG"
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
@@ -39,7 +50,7 @@ if [[ ${SKIP_NOTARIZE:-} == 1 ]]; then
   exit 0
 fi
 
-echo "› Notarizing (usually a few minutes)"
+echo "› Notarizing the DMG"
 xcrun notarytool submit "$DMG" --keychain-profile "$PROFILE" --wait
 xcrun stapler staple "$DMG"
 xcrun stapler validate "$DMG"
