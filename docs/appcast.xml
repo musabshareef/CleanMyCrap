@@ -6,5 +6,14 @@
     <description>Updates for Clean My Crap</description>
     <language>en</language>
     <!-- releases: newest first -->
+    <item>
+      <title>Version 1.2</title>
+      <pubDate>Wed, 18 Nov 2026 10:39:48 GMT</pubDate>
+      <sparkle:version>3</sparkle:version>
+      <sparkle:shortVersionString>1.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul><li>Updates itself now: Clean My Crap checks for new versions and installs them for you (Clean My Crap → Check for Updates…)</li><li>Send Feedback from the Help menu</li><li>Evict an App: drop an app on the window or the Dock icon and it leaves with all its crap</li><li>Apps You Forgot You Had, and Ghosts of Apps Past (leftovers of apps you already deleted)</li><li>The crap command-line tool (Clean My Crap → Install Command Line Tool…)</li><li>Feels more like a Mac app: instant switching, results appear while scanning, flushing in a sheet</li></ul>]]></description>
+      <enclosure url="https://github.com/musabshareef/CleanMyCrap/releases/download/v1.2/Clean-My-Crap-1.2.dmg" type="application/octet-stream" sparkle:edSignature="F7TF87xlLTTYH696uYeuRUgPcBwZiq1/2RGX+/ppc/KpRfJi1TLRGcveuhaA/PvjGsKU8hKiIQT7N67FJsIIDw==" length="4878839"/>
+    </item>
   </channel>
 </rss>
