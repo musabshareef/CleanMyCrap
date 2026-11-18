@@ -2,7 +2,12 @@ import AppKit
 import CrapCore
 import Foundation
 
-let version = "1.0"
+/// Same version as the app it ships in: read from the enclosing app's Info.plist (Contents/Helpers/crap → Contents/Info.plist).
+let version: String = {
+    let exe = (Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0])).resolvingSymlinksInPath()
+    let info = exe.deletingLastPathComponent().deletingLastPathComponent().appending(path: "Info.plist")
+    return (NSDictionary(contentsOf: info)?["CFBundleShortVersionString"] as? String) ?? "1.1 (dev)"
+}()
 
 let usage = """
 crap: find and flush the crap on your Mac. The command-line side of Clean My Crap.
