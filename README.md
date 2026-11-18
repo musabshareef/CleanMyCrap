@@ -45,3 +45,9 @@ swift run crap scan              # the CLI, straight from source
 4. Test the DMG, then `./scripts/publish.sh`: GitHub release + Sparkle update feed (`docs/appcast.xml`)
 
 Updates are signed with an EdDSA key kept in the release machine's keychain (Sparkle's `generate_keys`). Back it up: losing it means existing installs can't be updated.
+
+## License
+
+Clean My Crap is free software, made to be an honest alternative to paid Mac cleaners. The code is licensed under the [GNU General Public License v3.0](LICENSE): you can use, study, change and share it, and anything you build from it must stay free and open under the same license.
+
+**The name and icon are not part of the license.** "Clean My Crap" and the app icon belong to Musab Shareef. Forks are welcome, but must use their own name and icon, and must not suggest they're the official app.
