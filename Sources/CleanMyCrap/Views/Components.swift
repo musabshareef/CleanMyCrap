@@ -9,20 +9,6 @@ enum Brand {
     static let gradient = LinearGradient(colors: [peach, pink], startPoint: .topLeading, endPoint: .bottomTrailing)
 }
 
-/// A clean, neutral backdrop with the faintest warm glow up top.
-struct AmbientBackground: View {
-    var body: some View {
-        ZStack {
-            Color(nsColor: .windowBackgroundColor)
-            RadialGradient(colors: [Brand.peach.opacity(0.10), .clear],
-                           center: .top, startRadius: 0, endRadius: 700)
-        }
-        .ignoresSafeArea()
-        // Purely decorative: let clicks through to the title bar (double-click to zoom, dragging).
-        .allowsHitTesting(false)
-    }
-}
-
 /// A flat content surface. Liquid Glass is reserved for controls and navigation
 /// (per the HIG), so content groups use a quiet fill and a hairline edge instead.
 struct CardBackground<S: InsettableShape>: View {

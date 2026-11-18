@@ -3,7 +3,15 @@ import SwiftUI
 @MainActor
 @Observable
 final class AppModel {
-    enum Phase: Equatable { case welcome, scanning, results, cleaning, done }
+    enum Phase: Equatable { case welcome, scanning, results, cleaning }
+    enum Section: String, Hashable { case crap, apps }
+
+    /// One model for the whole app, so the Dock icon can hand over dropped apps.
+    static let shared = AppModel()
+
+    var section: Section = .crap
+    let apps = AppsModel()
+    var dropTargeted = false
 
     var phase: Phase = .welcome
     var disk = DiskInfo.current()
@@ -18,6 +26,8 @@ final class AppModel {
     var cleanProgress: Double = 0
     var cleanStatus = ""
     var report: CleanReport?
+    /// The report sheet after a flush.
+    var showReport = false
 
     var scanProgress: Double { Double(finishedRules.count) / Double(Rules.all.count) }
     var totalFound: Int64 { categories.reduce(0) { $0 + $1.totalSize } }
@@ -52,8 +62,6 @@ final class AppModel {
         Docker.reset()
         needsFullDiskAccess = !(await Task.detached { FS.canList(FS.url(".Trash")) }.value)
 
-        let started = Date()
-        var found: [CleanupCategory] = []
         await withTaskGroup(of: (Rule, [Found]).self) { group in
             for rule in Rules.all {
                 group.addTask { (rule, await rule.scan()) }
@@ -64,15 +72,13 @@ final class AppModel {
                     finishedRules.insert(rule.id)
                     foundSoFar += category.totalSize
                 }
-                if category.totalSize >= FS.oneMB { found.append(category) }
+                // Show up in the sidebar as soon as they're found.
+                if !category.items.isEmpty && category.totalSize >= rule.minTotal {
+                    let at = categories.firstIndex { ($0.risk, -$0.totalSize) > (category.risk, -category.totalSize) }
+                    withAnimation(.snappy) { categories.insert(category, at: at ?? categories.endIndex) }
+                }
             }
         }
-
-        // Let the scan screen breathe for a moment, even on a fast Mac.
-        let elapsed = Date().timeIntervalSince(started)
-        if elapsed < 1.5 { try? await Task.sleep(for: .seconds(1.5 - elapsed)) }
-
-        categories = found.sorted { ($0.risk, -$0.totalSize) < ($1.risk, -$1.totalSize) }
         phase = .results
     }
 
@@ -86,6 +92,7 @@ final class AppModel {
         cleanProgress = 0
 
         var freed: Int64 = 0
+        var flushed: Set<CleanupItem.ID> = []
         var failures: [CleanReport.Failure] = []
         var movedToTrash = false
         var touchedDocker = false
@@ -98,6 +105,8 @@ final class AppModel {
             if entry.category.id.hasPrefix("docker") { touchedDocker = true }
             if let error = result.error {
                 failures.append(.init(name: entry.item.name, reason: error))
+            } else {
+                flushed.insert(entry.item.id)
             }
             withAnimation(.smooth) { cleanProgress = Double(i + 1) / Double(work.count) }
         }
@@ -105,15 +114,25 @@ final class AppModel {
         disk = .current()
         report = CleanReport(freed: freed, itemCount: work.count, freeBefore: before, freeAfter: disk.free,
                              failures: failures, movedToTrash: movedToTrash, touchedDocker: touchedDocker)
-        try? await Task.sleep(for: .milliseconds(600))
-        phase = .done
+        try? await Task.sleep(for: .milliseconds(400))
+        // What's gone is gone from the list too.
+        for c in categories { c.items.removeAll { flushed.contains($0.id) } }
+        categories.removeAll { $0.items.isEmpty }
+        phase = .results
+        showReport = true
     }
 
-    func startOver() {
-        categories = []
-        disk = .current()
-        phase = .welcome
+    /// Apps dragged onto the window or the Dock icon: off to the Apps side.
+    func evict(_ urls: [URL]) -> Bool {
+        guard let app = urls.first(where: { $0.pathExtension == "app" }) else { return false }
+        section = .apps
+        Task {
+            await apps.loadIfNeeded()
+            apps.open(app)
+        }
+        return true
     }
+
 }
 
 enum Cleaner {
@@ -122,19 +141,22 @@ enum Cleaner {
     static func remove(_ item: CleanupItem) async -> Result {
         await Task.detached(priority: .userInitiated) {
             switch item.removal {
-            case .delete(let url), .trash(let url):
-                guard isSafeTarget(url) else { return Result(freed: 0, error: "Refused: outside your home folder") }
+            case .delete, .trash, .trashAll:
+                let urls = item.removal.urls
+                guard urls.allSatisfy(isSafeTarget) else { return Result(freed: 0, error: "Refused: outside your home folder") }
                 var failure: String?
-                do {
-                    if case .trash = item.removal {
-                        try FileManager.default.trashItem(at: url, resultingItemURL: nil)
-                    } else {
-                        try FileManager.default.removeItem(at: url)
+                for url in urls {
+                    do {
+                        if item.removal.isTrash {
+                            try FileManager.default.trashItem(at: url, resultingItemURL: nil)
+                        } else {
+                            try FileManager.default.removeItem(at: url)
+                        }
+                    } catch {
+                        failure = "Some files were locked or protected, so part of it stayed."
                     }
-                } catch {
-                    failure = "Some files were locked or protected, so part of it stayed."
                 }
-                let left = FS.exists(url) ? FS.size(of: url) : 0
+                let left = urls.reduce(Int64(0)) { $0 + (FS.exists($1) ? FS.size(of: $1) : 0) }
                 return Result(freed: max(item.size - left, 0), error: failure)
 
             case .commands(let commands):

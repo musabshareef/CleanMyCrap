@@ -62,17 +62,27 @@ enum Removal: Sendable, Hashable {
     case delete(URL)
     /// Move to the Trash. Used for high-risk stuff, so it can be fished back out.
     case trash(URL)
+    /// Move several places to the Trash as one item (an old app's scattered leftovers).
+    case trashAll([URL])
     /// Run tool commands (Docker, simctl…).
     case commands([Command])
 
-    var url: URL? {
+    var url: URL? { urls.first }
+
+    var urls: [URL] {
         switch self {
-        case .delete(let u), .trash(let u): u
-        case .commands: nil
+        case .delete(let u), .trash(let u): [u]
+        case .trashAll(let us): us
+        case .commands: []
         }
     }
 
-    var isTrash: Bool { if case .trash = self { true } else { false } }
+    var isTrash: Bool {
+        switch self {
+        case .trash, .trashAll: true
+        default: false
+        }
+    }
 }
 
 /// What a scan rule hands back. Sendable so rules can run off the main actor.
@@ -143,6 +153,8 @@ struct Rule: Sendable {
     let risk: Risk
     let explanation: String
     var note: String? = nil
+    /// Categories smaller than this stay hidden.
+    var minTotal: Int64 = 1 << 20
     let scan: @Sendable () async -> [Found]
 }
 

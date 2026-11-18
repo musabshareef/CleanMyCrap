@@ -45,14 +45,14 @@ struct ResultsView: View {
                     if let c = model.categories.first(where: { $0.id == id }) {
                         CategoryDetailView(category: c)
                     } else {
-                        OverviewView(selection: $selection)
+                        overview
                     }
                 default:
-                    OverviewView(selection: $selection)
+                    overview
                 }
             }
         }
-        .navigationTitle("Clean My Crap")
+        .navigationTitle(title)
         .navigationSubtitle(subtitle)
         .toolbar {
             ToolbarItemGroup {
@@ -63,12 +63,14 @@ struct ResultsView: View {
                 } label: {
                     Label("Select", systemImage: "checklist")
                 }
+                .disabled(model.phase != .results)
                 Button {
                     Task { await model.scan() }
                 } label: {
                     Label("Sniff Again", systemImage: "arrow.clockwise")
                 }
-                .help("Scan again")
+                .help("Scan again (⌘R)")
+                .disabled(model.phase == .scanning || model.phase == .cleaning)
             }
             ToolbarSpacer(.fixed)
             ToolbarItem(placement: .primaryAction) {
@@ -82,10 +84,14 @@ struct ResultsView: View {
                 .buttonStyle(.glassProminent)
                 .tint(model.selected(for: .high) > 0 ? .red : Brand.accent)
                 .keyboardShortcut(.delete, modifiers: .command)
-                .disabled(size == 0)
+                .disabled(size == 0 || model.phase != .results)
                 .help(size > 0 ? "Flush the selected crap (⌘⌫)" : "Select some crap first")
                 .animation(.snappy, value: size)
             }
+        }
+        .sheet(isPresented: Binding(get: { model.phase == .cleaning || model.showReport },
+                                    set: { if !$0 { model.showReport = false } })) {
+            FlushSheet().environment(model)
         }
         .alert("Flush \(model.selectedSize.bytes) of crap?", isPresented: $confirming) {
             Button("Flush It", role: .destructive) { Task { await model.flush() } }
@@ -95,7 +101,26 @@ struct ResultsView: View {
         }
     }
 
+    /// Where you are, not what the app is called (HIG: don't title windows with the app name).
+    private var title: String {
+        if case .category(let id) = selection, let c = model.categories.first(where: { $0.id == id }) { return c.name }
+        return "Overview"
+    }
+
+    @ViewBuilder private var overview: some View {
+        switch model.phase {
+        case .welcome: WelcomePane()
+        case .scanning: ScanPane()
+        default: OverviewView(selection: $selection)
+        }
+    }
+
     private var subtitle: String {
+        switch model.phase {
+        case .welcome: return "\(model.disk.free.bytes) free of \(model.disk.total.bytes)"
+        case .scanning: return "Sniffing… \(model.foundSoFar.bytes) so far"
+        default: break
+        }
         let selected = model.selectedSize
         return selected > 0
             ? "\(selected.bytes) of \(model.totalFound.bytes) selected"
@@ -110,6 +135,9 @@ struct ResultsView: View {
         }
         lines.append(parts.joined(separator: "  ·  "))
         lines.append("Safe and low-risk crap is deleted for good. It grows back on its own.")
+        if model.categories.first(where: { $0.id == "ghosts" })?.selectedCount ?? 0 > 0 {
+            lines.append("Ghosts of Apps Past go to the Trash instead, just in case.")
+        }
         if model.selected(for: .high) > 0 {
             lines.append("High-risk files go to the Trash, so you can fish them back out. Docker volumes can't be undone.")
         }
@@ -450,6 +478,6 @@ struct CategoryDetailView: View {
     }
 
     private func urls(for ids: Set<CleanupItem.ID>) -> [URL] {
-        category.items.filter { ids.contains($0.id) }.compactMap(\.removal.url)
+        category.items.filter { ids.contains($0.id) }.flatMap(\.removal.urls)
     }
 }

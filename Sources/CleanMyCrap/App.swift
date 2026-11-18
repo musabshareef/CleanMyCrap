@@ -3,7 +3,7 @@ import SwiftUI
 @main
 struct CleanMyCrapApp: App {
     @NSApplicationDelegateAdaptor private var delegate: AppDelegate
-    @State private var model = AppModel()
+    @State private var model = AppModel.shared
 
     var body: some Scene {
         WindowGroup("Clean My Crap") {
@@ -16,6 +16,11 @@ struct CleanMyCrapApp: App {
         .windowToolbarStyle(.unified)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandGroup(after: .sidebar) {
+                Button("Crap") { model.section = .crap }.keyboardShortcut("1")
+                Button("Apps") { model.section = .apps }.keyboardShortcut("2")
+                Divider()
+            }
             CommandMenu("Crap") {
                 Button("Sniff Again") { Task { await model.scan() } }
                     .keyboardShortcut("r")
@@ -36,6 +41,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate()
     }
 
+    /// Apps dropped on the Dock icon.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        MainActor.assumeIsolated { _ = AppModel.shared.evict(urls) }
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }
 
@@ -43,15 +53,28 @@ struct RootView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        ZStack {
-            switch model.phase {
-            case .welcome: WelcomeView().transition(.blurReplace)
-            case .scanning: ScanningView().transition(.blurReplace)
-            case .results: ResultsView().transition(.opacity)
-            case .cleaning: CleaningView().transition(.blurReplace)
-            case .done: DoneView().transition(.blurReplace)
+        @Bindable var model = model
+        // Switch instantly, like any Mac app's view switcher. No crossfades.
+        Group {
+            switch model.section {
+            case .crap: ResultsView()
+            case .apps: AppsView()
             }
         }
-        .animation(.smooth(duration: 0.5), value: model.phase)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker("Section", selection: $model.section) {
+                    Text("Crap").tag(AppModel.Section.crap)
+                        .help("Find and flush caches, junk and clutter (⌘1)")
+                    Text("Apps").tag(AppModel.Section.apps)
+                        .help("Uninstall apps along with everything they left behind (⌘2)")
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
+        }
+        .dropDestination(for: URL.self) { urls, _ in
+            model.evict(urls)
+        } isTargeted: { model.dropTargeted = $0 }
     }
 }

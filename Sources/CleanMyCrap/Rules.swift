@@ -120,6 +120,11 @@ enum Rules {
                 ("Library/Group Containers/243LU875E5.groups.com.apple.podcasts/Library/Cache", "Podcasts downloads"),
             ]) { .delete($0) }
         },
+        Rule(id: "ghosts", name: "Ghosts of Apps Past", icon: "door.left.hand.open", risk: .low,
+             explanation: "Settings, caches and data from apps you already deleted. The app moved out. Its crap didn't.",
+             note: "These go to the Trash, in case you're planning a reunion.", minTotal: 1) {
+            await Ghosts.scan()
+        },
         Rule(id: "trash", name: "Trash", icon: "trash.fill", risk: .low,
              explanation: "Stuff you already threw away but never took out. Emptying it is forever.") {
             await FS.sizedChildren(of: FS.url(".Trash"), includeHidden: true, minSize: 1, exclude: [".DS_Store"]) { .delete($0) }
